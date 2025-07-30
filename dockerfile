@@ -1,16 +1,13 @@
-# Dockerfile
+# Dockerfile for Declarative Deployment Services
 
 # Use an official Python runtime as a parent image.
-# Using 'slim' keeps the image size down.
 FROM python:3.10-slim
 
-# Set environment variables to prevent buffering of prints and
-# to handle debian package installation non-interactively.
+# Set environment variables.
 ENV PYTHONUNBUFFERED=1
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install system-level dependencies required by OpenCV and other libraries.
-# 'ffmpeg' is for video processing, 'libgl1' is for graphics.
+# Install system-level dependencies.
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
@@ -24,23 +21,32 @@ RUN apt-get update && apt-get install -y \
 # Create a non-root user for security purposes.
 RUN addgroup --system app && adduser --system --group app
 
+# FIX: Explicitly set the HOME environment variable for the 'app' user.
+ENV HOME=/home/app
+
 # Set the working directory in the container.
 WORKDIR /app
 
-# Create the application directories and set permissions.
-# We pre-create the .deepface directory to mount model weights later.
-RUN mkdir -p /app/face_database /home/app/.deepface \
-    && chown -R app:app /app /home/app/.deepface
+# Create the application directories that will be used for persistent storage.
+# We no longer need to chown here, as the VOLUME instruction handles it.
+RUN mkdir -p /app/face_database /home/app/.deepface/weights
 
-# Copy the requirements file first to leverage Docker's layer caching.
-# This step will only be re-run if requirements.txt changes.
-COPY --chown=app:app requirements.txt .
+# --- KEY CHANGE FOR YOUR DEPLOYMENT SERVICE ---
+# Declare the directories that should be mounted to persistent disks.
+# Your deployment platform will use this information.
+VOLUME ["/app/face_database", "/home/app/.deepface/weights"]
+
+# Copy the requirements file.
+COPY requirements.txt .
 
 # Install Python dependencies.
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application code into the container.
-COPY --chown=app:app . .
+# Copy the application code.
+COPY . .
+
+# Set permissions for the app code after copying.
+RUN chown -R app:app /app
 
 # Switch to the non-root user.
 USER app
