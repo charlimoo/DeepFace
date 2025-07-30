@@ -1,4 +1,4 @@
-# Dockerfile for Declarative Deployment Services
+# Dockerfile for Declarative Deployment Services (FINAL)
 
 # Use an official Python runtime as a parent image.
 FROM python:3.10-slim
@@ -18,23 +18,15 @@ RUN apt-get update && apt-get install -y \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a non-root user for security purposes.
-RUN addgroup --system app && adduser --system --group app
+# Create a non-root user.
+# The --create-home flag will automatically create /home/app
+RUN addgroup --system app && adduser --system --group --create-home app
 
-# FIX: Explicitly set the HOME environment variable for the 'app' user.
+# Set the HOME environment variable.
 ENV HOME=/home/app
 
-# Set the working directory in the container.
+# Set the working directory.
 WORKDIR /app
-
-# Create the application directories that will be used for persistent storage.
-# We no longer need to chown here, as the VOLUME instruction handles it.
-RUN mkdir -p /app/face_database /home/app/.deepface/weights
-
-# --- KEY CHANGE FOR YOUR DEPLOYMENT SERVICE ---
-# Declare the directories that should be mounted to persistent disks.
-# Your deployment platform will use this information.
-VOLUME ["/app/face_database", "/home/app/.deepface/weights"]
 
 # Copy the requirements file.
 COPY requirements.txt .
@@ -45,14 +37,21 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the application code.
 COPY . .
 
-# Set permissions for the app code after copying.
-RUN chown -R app:app /app
+# --- FINAL PERMISSION FIX ---
+# This is the most important step.
+# It ensures that the app user owns the work directory AND the volume mount points.
+# We run this as root BEFORE switching to the app user.
+RUN chown -R app:app /app /home/app
 
-# Switch to the non-root user.
+# Declare the directories that should be mounted to persistent disks.
+# This must come BEFORE switching the user if we need to set permissions.
+VOLUME ["/app/face_database", "/home/app/.deepface/weights"]
+
+# Switch to the non-root user for security.
 USER app
 
 # Expose the port that Streamlit runs on.
 EXPOSE 8501
 
 # The command to run the application.
-CMD ["streamlit", "run", "app.py"]
+CMD ["streamlit", "run", "app.py", "--server.enableCORS=false", "--server.enableXsrfProtection=false"]
