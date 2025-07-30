@@ -1,0 +1,29 @@
+# .dockerignore
+
+# Git
+.git
+
+# Docker
+
+# Python virtual environment
+venv/
+.venv/
+env/
+.env
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+
+# Runtime data (IMPORTANT)
+face_database/
+face_library/
+testData/
+
+# IDE settings
+.vscode/
+.idea/
+
+
+commands.txt
