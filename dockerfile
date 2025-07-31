@@ -1,4 +1,4 @@
-# Dockerfile for Declarative Deployment Services (FINAL)
+# Dockerfile for Declarative Deployment Services (Final, Compatible Version)
 
 # Use an official Python runtime as a parent image.
 FROM python:3.10-slim
@@ -18,9 +18,9 @@ RUN apt-get update && apt-get install -y \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a non-root user.
-# The --create-home flag will automatically create /home/app
-RUN addgroup --system app && adduser --system --group --create-home app
+# --- COMPATIBLE USER CREATION ---
+# Create the user and group, then manually create the home directory.
+RUN addgroup --system app && adduser --system --ingroup app app
 
 # Set the HOME environment variable.
 ENV HOME=/home/app
@@ -38,13 +38,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # --- FINAL PERMISSION FIX ---
-# This is the most important step.
-# It ensures that the app user owns the work directory AND the volume mount points.
-# We run this as root BEFORE switching to the app user.
-RUN chown -R app:app /app /home/app
+# Create the home directory and set ownership for all necessary directories at once.
+# This runs as root before we switch to the 'app' user.
+RUN mkdir -p /home/app && chown -R app:app /app /home/app
 
 # Declare the directories that should be mounted to persistent disks.
-# This must come BEFORE switching the user if we need to set permissions.
 VOLUME ["/app/face_database", "/home/app/.deepface/weights"]
 
 # Switch to the non-root user for security.
