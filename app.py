@@ -177,7 +177,7 @@ def handle_db_upload():
             saved_count += 1
         if saved_count > 0:
             st.toast(T["saved_new_images"].format(saved_count))
-            st.session_state.db_uploader = []
+            del st.session_state.db_uploader
             st.rerun()
 
 @st.dialog(T["edit_person_info_title"])
